@@ -7,6 +7,7 @@ import Navbar from "../components/Navbar";
 import VehicleCard from "../components/VehicleCard";
 import UserCard from "../components/UserCard";
 import LoadingSpinner from "../components/LoadingSpinner";
+import EditUserProfile from "../components/EditUserForm"; // Add this import
 
 const Dashboard = () => {
   const { isAdmin } = useAuth();
@@ -14,6 +15,8 @@ const Dashboard = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [users, setUsers] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [editingUser, setEditingUser] = useState<Profile | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     fetchVehicles();
@@ -92,6 +95,40 @@ const Dashboard = () => {
       fetchVehicles();
     } catch (error: any) {
       toast.error(`Error deleting user: ${error.message}`);
+    }
+  };
+
+  const handleEdit = (profile: Profile) => {
+    console.log("button is clicking", profile);
+    setEditingUser(profile);
+    setShowEditModal(true);
+  };
+  const handleSave = async (updatedData: { name: string; email: string }) => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .update({
+          name: updatedData.name,
+          email: updatedData.email,
+        })
+        .eq("id", editingUser?.id)
+        .select();
+
+      if (error) throw error;
+
+      toast.success("User updated successfully!");
+
+      // Update local user list state (assuming 'users' contains all users)
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === editingUser?.id ? { ...user, ...data[0] } : user
+        )
+      );
+
+      setShowEditModal(false);
+      setEditingUser(null);
+    } catch (error: any) {
+      toast.error("Failed to update user: " + error.message);
     }
   };
 
@@ -189,8 +226,20 @@ const Dashboard = () => {
                         key={user.id}
                         profile={user}
                         onDelete={handleDeleteUser}
+                        onEdit={handleEdit}
                       />
                     ))}
+                    {/* TEMP modal test */}
+                    {showEditModal && (
+                      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                        <div className="bg-white p-6 rounded shadow-lg">
+                          <h2>Edit User: {editingUser?.name}</h2>
+                          <button onClick={() => setShowEditModal(false)}>
+                            Close
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -198,6 +247,17 @@ const Dashboard = () => {
           </>
         )}
       </div>
+      {editingUser && showEditModal && (
+        <EditUserProfile
+          user={editingUser}
+          isOpen={showEditModal}
+          onClose={() => {
+            setEditingUser(null);
+            setShowEditModal(false);
+          }}
+          onSave={handleSave}
+        />
+      )}
     </div>
   );
 };

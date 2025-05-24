@@ -1,16 +1,16 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Car, User, LogOut, Menu, X } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Car, LogOut, Menu, X } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
 const Navbar = () => {
-  const { signOut, profile, isAdmin } = useAuth();
+  const { signOut } = useAuth();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/');
+    navigate("/");
   };
 
   const toggleMenu = () => {
@@ -27,23 +27,23 @@ const Navbar = () => {
               <span className="text-xl font-bold">VehiclePark</span>
             </Link>
           </div>
-          
+
           {/* Desktop menu */}
           <div className="hidden md:flex items-center space-x-4">
-            <Link 
-              to="/dashboard" 
+            <Link
+              to="/dashboard"
               className="px-3 py-2 rounded-md text-sm font-medium hover:bg-primary-dark transition-colors"
             >
               Dashboard
             </Link>
-            <Link 
-              to="/add-vehicle" 
+            <Link
+              to="/add-vehicle"
               className="px-3 py-2 rounded-md text-sm font-medium hover:bg-primary-dark transition-colors"
             >
               Add Vehicle
             </Link>
-            <Link 
-              to="/profile" 
+            <Link
+              to="/profile"
               className="px-3 py-2 rounded-md text-sm font-medium hover:bg-primary-dark transition-colors"
             >
               Profile

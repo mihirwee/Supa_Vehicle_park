@@ -12,46 +12,44 @@ import NotFound from "./pages/NotFound";
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Toaster position="top-center" />
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/add-vehicle"
-            element={
-              <ProtectedRoute>
-                <VehicleForm />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/edit-vehicle/:id"
-            element={
-              <ProtectedRoute>
-                <VehicleForm />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </BrowserRouter>
+      <Toaster position="top-center" />
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/add-vehicle"
+          element={
+            <ProtectedRoute>
+              <VehicleForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/edit-vehicle/:id"
+          element={
+            <ProtectedRoute>
+              <VehicleForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
     </AuthProvider>
   );
 }
