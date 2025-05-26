@@ -1,81 +1,135 @@
-// import { useEffect, useState } from "react";
-// import { supabase } from "../lib/supabase";
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
+interface ActivityTabProps {
+  role: "admin" | "user"; // Define the expected values for the 'role' prop
+}
 
-// const ActivityTab = ({ role }) => {
-//   const [logs, setLogs] = useState([]);
-//   const [activeTab, setActiveTab] = useState(
-//     role === "admin" ? "admin" : "user"
-//   );
-//   const [userId, setUserId] = useState(null);
+const ActivityTab: React.FC<ActivityTabProps> = ({ role }) => {
+  interface Log {
+    id: any;
+    action: any;
+    timestamp: any;
+    details: any;
+    profiles: { name: any; email: any }[];
+  }
 
-//   useEffect(() => {
-//     const getUser = async () => {
-//       const {
-//         data: { session },
-//       } = await supabase.auth.getSession();
-//       setUserId(session?.user?.id || null);
-//     };
-//     getUser();
-//   }, []);
+  const [logs, setLogs] = useState<Log[]>([]);
+  const [activeTab, setActiveTab] = useState(
+    role === "admin" ? "admin" : "user"
+  );
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const logsPerPage = 5; // Number of logs per page
 
-//   useEffect(() => {
-//     const fetchLogs = async () => {
-//       if (!userId) return;
+  useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      setUserId(session?.user?.id || null);
+    };
+    getUser();
+  }, []);
 
-//       const isAdmin = role === "admin";
+  useEffect(() => {
+    const fetchLogs = async () => {
+      if (!userId) return;
 
-//       const { data, error } = await supabase
-//         .from("vehicle_logs")
-//         .select(
-//           `
-//           id,
-//           action,
-//           timestamp,
-//           details,
-//           profiles ( name, email )
-//         `
-//         )
-//         .order("timestamp", { ascending: false })
-//         .eq(isAdmin && activeTab === "user" ? "user_id" : "", userId);
+      const isAdmin = role === "admin";
+      const start = (currentPage - 1) * logsPerPage;
+      const end = start + logsPerPage - 1;
 
-//       if (error) console.error(error);
-//       else setLogs(data);
-//     };
+      let query = supabase
+        .from("activity_logs")
+        .select(
+          `
+        id,
+        action,
+        timestamp,
+        details,
+        profiles ( name, email )
+      `
+        )
+        .order("timestamp", { ascending: false })
+        .range(start, end);
 
-//     fetchLogs();
-//   }, [activeTab, role, userId]);
+      if (isAdmin && activeTab === "user") {
+        query = query.eq("user_id", userId);
+      }
 
-//   return (
-//     <div>
-//       <h2>Activity Logs</h2>
+      const { data, error } = await query;
 
-//       {role === "admin" && (
-//         <div style={{ marginBottom: "1rem" }}>
-//           <button onClick={() => setActiveTab("admin")}>Admin Activity</button>
-//           <button onClick={() => setActiveTab("user")}>User Activity</button>
-//         </div>
-//       )}
+      console.log("Fetched Logs:", data);
+      if (error) console.error(error);
+      else setLogs(data);
+      setIsLoading(false);
+    };
 
-//       {logs.length === 0 ? (
-//         <p>No activity found.</p>
-//       ) : (
-//         <ul>
-//           {logs.map((log: any) => (
-//             <li key={log.id}>
-//               <strong>{log.action.toUpperCase()}</strong> —{" "}
-//               {log.details?.make || "Unknown vehicle"} on{" "}
-//               {new Date(log.timestamp).toLocaleString()}
-//               {role === "admin" && log.profiles && (
-//                 <div style={{ fontSize: "0.8rem" }}>
-//                   by {log.profiles.name} ({log.profiles.email})
-//                 </div>
-//               )}
-//             </li>
-//           ))}
-//         </ul>
-//       )}
-//     </div>
-//   );
-// };
+    fetchLogs();
+  }, [activeTab, role, userId, currentPage]);
 
-// export default ActivityTab;
+  const handleNextPage = () => {
+    setCurrentPage((prevPage) => prevPage + 1);
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prevPage) => prevPage - 1);
+    }
+  };
+
+  return (
+    <div>
+      {isLoading ? (
+        <p>Loading...</p>
+      ) : logs.length === 0 ? (
+        <p>No activity found.</p>
+      ) : (
+        <ul className="space-y-4">
+          {logs.map(
+            (log: any) => (
+              console.log("Logsss:", log),
+              console.log("Logsss profiless:", log.profiles),
+              (
+                <li
+                  key={log.id}
+                  className="bg-white shadow rounded p-4 border border-gray-200"
+                >
+                  <p className="text-sm text-gray-600">
+                    <strong>{log.action.toUpperCase()}</strong> —{" "}
+                    {log.details?.entity || "Unknown entity"} <br />
+                    <span className="text-xs text-gray-400">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </span>
+                  </p>
+                </li>
+              )
+            )
+          )}
+        </ul>
+      )}
+      <div className="flex justify-between mt-4">
+        <button
+          onClick={handlePreviousPage}
+          disabled={currentPage === 1}
+          className={`px-4 py-2 rounded ${
+            currentPage === 1
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-primary text-white hover:bg-primary-dark"
+          }`}
+        >
+          Previous
+        </button>
+        <span className="text-sm text-gray-600">Page {currentPage}</span>
+        <button
+          onClick={handleNextPage}
+          className="px-4 py-2 rounded bg-primary text-white hover:bg-primary-dark"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+};
+export default ActivityTab;

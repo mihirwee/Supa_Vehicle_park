@@ -1,17 +1,20 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import { Car, Users } from "lucide-react";
+import { Car, Users, Clock4 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase, Vehicle, Profile } from "../lib/supabase";
 import Navbar from "../components/Navbar";
 import VehicleCard from "../components/VehicleCard";
 import UserCard from "../components/UserCard";
 import LoadingSpinner from "../components/LoadingSpinner";
-import EditUserProfile from "../components/EditUserForm"; // Add this import
+import EditUserProfile from "../components/EditUserForm";
+import ActivityTab from "../components/ActivityTabs";
 
 const Dashboard = () => {
   const { isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<"vehicles" | "users">("vehicles");
+  const [activeTab, setActiveTab] = useState<"vehicles" | "users" | "activity">(
+    "vehicles"
+  );
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [users, setUsers] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,15 +82,50 @@ const Dashboard = () => {
 
   const handleDeleteUser = async (id: string) => {
     try {
+      console.log("Deleting user with ID:", id);
+
+      const { error: loggingError } = await supabase
+        .from("activity_logs")
+        .insert([
+          {
+            action: "DELETE",
+            timestamp: new Date().toISOString(),
+            details: { entity: "user", id }, // Add any relevant details
+            user_id: id, // The ID of the logged-in user performing the action
+          },
+        ]);
+
+      if (loggingError) {
+        console.error("Error logging delete activity:", loggingError);
+      }
+
+      // Delete related records (if necessary)
+      const { error: vehicleError } = await supabase
+        .from("vehicles")
+        .delete()
+        .eq("user_id", id);
+
+      if (vehicleError) {
+        console.error("Error deleting related vehicles:", vehicleError);
+        throw vehicleError;
+      }
+
       // Delete user from profiles table
-      const { error } = await supabase.from("profiles").delete().eq("id", id);
+      const { data, error } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", id);
 
       if (error) {
+        console.error("Error deleting user from profiles:", error);
         throw error;
       }
 
-      // Note: vehicles will be cascade deleted due to foreign key constraint
+      console.log("Deleted user data:", data);
 
+      // Log the delete activity
+
+      // Update local state
       toast.success("User deleted successfully");
       setUsers(users.filter((user) => user.id !== id));
 
@@ -97,12 +135,11 @@ const Dashboard = () => {
       toast.error(`Error deleting user: ${error.message}`);
     }
   };
-
   const handleEdit = (profile: Profile) => {
-    console.log("button is clicking", profile);
     setEditingUser(profile);
     setShowEditModal(true);
   };
+
   const handleSave = async (updatedData: { name: string; email: string }) => {
     try {
       const { data, error } = await supabase
@@ -115,6 +152,17 @@ const Dashboard = () => {
         .select();
 
       if (error) throw error;
+
+      const datas = await supabase.from("activity_logs").insert([
+        {
+          action: "UPDATE",
+          timestamp: new Date().toISOString(),
+          details: { entity: "user", id: editingUser?.id }, // Add any relevant details
+          user_id: editingUser?.id, // The ID of the logged-in user performing the action
+          entity: "User",
+        },
+      ]);
+      console.log("data", datas);
 
       toast.success("User updated successfully!");
 
@@ -159,10 +207,21 @@ const Dashboard = () => {
                     activeTab === "users"
                       ? "border-primary text-primary"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
+                  } mr-8`}
                 >
                   <Users className="inline-block h-5 w-5 mr-2" />
                   Users
+                </button>
+                <button
+                  onClick={() => setActiveTab("activity")}
+                  className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === "activity"
+                      ? "border-primary text-primary"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  } mr-8`}
+                >
+                  <Clock4 className="inline-block h-5 w-5 mr-2" />
+                  Activity Logs
                 </button>
               </nav>
             </div>
@@ -229,19 +288,13 @@ const Dashboard = () => {
                         onEdit={handleEdit}
                       />
                     ))}
-                    {/* TEMP modal test */}
-                    {showEditModal && (
-                      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                        <div className="bg-white p-6 rounded shadow-lg">
-                          <h2>Edit User: {editingUser?.name}</h2>
-                          <button onClick={() => setShowEditModal(false)}>
-                            Close
-                          </button>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
+              </div>
+            )}
+            {activeTab === "activity" && (
+              <div>
+                <ActivityTab role={isAdmin ? "admin" : "user"} />
               </div>
             )}
           </>

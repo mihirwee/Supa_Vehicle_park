@@ -77,10 +77,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+
+    const user = data.user;
+    console.log("user", user);
+    if (!user) {
+      console.log("No user found after login");
+      return { error: { message: "Login failed" } };
+    }
+
+    // Fetch the user's profile to include their name in the log
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("name, role")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError) {
+      console.error("Error fetching user profile for logging:", profileError);
+    }
+
+    // Dynamically set the entity based on the user's role
+    const entity = profile?.role === "admin" ? "Admin" : "User";
+
+    const { error: loggingError } = await supabase
+      .from("activity_logs")
+      .insert([
+        {
+          action: "LOGIN",
+          timestamp: new Date().toISOString(),
+          details: { entity, email },
+          user_id: user.id,
+        },
+      ]);
+    console.log("profile", profile);
+
+    if (loggingError) {
+      console.log("Error logging login activity:", loggingError);
+    }
+
     return { error };
   }
 
@@ -119,12 +157,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log("profile data", profileData);
 
     if (profileError) return { error: profileError, data: null };
+
+    const { error: loggingError } = await supabase
+      .from("activity_logs")
+      .insert([
+        {
+          action: "SIGNUP",
+          timestamp: new Date().toISOString(),
+          details: { entity: role, email, name }, // Include role, email, and name
+          user_id: user.id, // The ID of the newly created user
+        },
+      ]);
+
+    if (loggingError) {
+      console.error("Error logging sign-up activity:", loggingError);
+    }
+
     console.log("profile error", profileError);
     return { error: null, data: profileData };
   };
 
   async function signOut() {
-    await supabase.auth.signOut();
+    if (!user) {
+      console.error("No user is currently logged in.");
+      return;
+    }
+
+    // Log the sign-out activity
+    const { error: loggingError } = await supabase
+      .from("activity_logs")
+      .insert([
+        {
+          action: "SIGNOUT",
+          timestamp: new Date().toISOString(),
+          details: {
+            entity: profile?.role || "Unknown",
+            name: profile?.name || "Unknown",
+          }, // Include role and name
+          user_id: user.id, // The ID of the currently logged-in user
+        },
+      ]);
+
+    if (loggingError) {
+      console.error("Error logging sign-out activity:", loggingError);
+    }
+
+    // Perform the actual sign-out
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Error during sign-out:", error);
+    }
+
+    // Clear local state
+    setSession(null);
+    setUser(null);
+    setProfile(null);
+    setIsAdmin(false);
   }
 
   const value = {

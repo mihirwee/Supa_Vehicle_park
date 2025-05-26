@@ -74,7 +74,7 @@ const UserCard = ({ profile, onDelete, onEdit }: UserCardProps) => {
         confirmLabel="Delete"
         cancelLabel="Cancel"
         onConfirm={() => {
-          onDelete(profile.id);
+          onDelete?.(profile.id);
           setShowDeleteDialog(false);
         }}
         onCancel={() => setShowDeleteDialog(false)}

@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -7,7 +7,6 @@ import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import VehicleForm from "./pages/VehicleForm";
 import Profile from "./pages/Profile";
-import NotFound from "./pages/NotFound";
 
 function App() {
   return (
